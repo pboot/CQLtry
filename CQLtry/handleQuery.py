@@ -59,7 +59,7 @@ class tssQuery():
         if not isinstance(ashelve,shelve.DbfilenameShelf):
             raise ValueError('Shelve is not a shelve but a ' + str(type(ashelve)))
         self.setQuery(query)
-        self.shelve = ashelve
+        self.sshelve = ashelve
         self.elastic = elastic
         if elastic:
             self.es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
@@ -127,11 +127,13 @@ class tssQuery():
                 keys = [h['_id'] for h in s['hits']['hits']]
 #                print(keys)
         if checkall:
-            keys = self.shelve.keys()
+            keys = self.sshelve.keys()
             factor = 1
         for k in keys:
-#            print(k)
-            sent = self.shelve[k]
+            if k not in self.sshelve:
+                print('Can''t find key, this shouldn''t happen:', k)
+                continue
+            sent = self.sshelve[k]
             for r in qh.tsqueryexec(self.query,sent):
                 hitString = ts.taggedString(sent.id,'',sent.meta)
                 hitString += r[1]
@@ -146,7 +148,7 @@ class queryUnit(list):
         self += l
     def setAnchor(self,anchored):
         self.anchored = anchored
-    def checkQUnit(self,l,anchored):
+    def checkQUnit(self,l ,anchored):
         if anchored is not None and anchored not in ['start']:
             raise ValueError("anchored must be None or 'start' but is " + anchored)
         if not isinstance(l,list):

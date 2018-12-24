@@ -11,67 +11,6 @@ from random import randint
 
 #meta = namedtuple('meta', ['collection', 'genre', 'nur', 'rating'])
 
-class taggedStringStore():
-    def __init__(self, dirname):
-        self.dirname = dirname
-        self.shelvename = os.path.join(self.dirname,'shelve')
-    def reset(self):
-        try:
-            shutil.rmtree(self.dirname)
-        except FileNotFoundError:
-            pass
-        time.sleep(1)
-        os.mkdir(self.dirname)
-    def tssOpen(self):
-        self.shelve = shelve.open(self.shelvename)
-        return self.shelve
-    def tssAdd(self,ident,ts):
-        self.shelve[ident] = ts
-    def tssClose(self):
-        self.createIndex()
-        self.shelve.close()
-    def createIndex(self):
-        dirname = self.dirname.replace('\\','/')
-        ixname = dirname.rstrip('/').rpartition('/')[2]
-        es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
-        es.indices.delete(index=ixname, ignore=[400, 404])
-        gen = (self.createIndexParms(self.shelve[r], ixname) for r in self.shelve.keys())
-        helpers.bulk(es,gen)
-    def createIndexParms(self,ts,ixname):
-        d = ts.getIndexEntry()
-        d['_type'] = 'response'
-        d['_index'] = ixname
-        d['_id'] = ts.id
-        return d
-
-class taggedStringCreator():
-    def create(self,ident,string,meta):
-        l = []
-        i = 0
-        for ss in string.split():
-            init = self.inittw(ss)
-            l.append(taggedWord(i, init[0],init[1], init[2]))
-            i += 1
-        return taggedString(ident, l, meta)
-    def inittw (self,string):
-        string = string.lower()
-        c = string.count('/')
-        if c % 2 == 0:
-            half = int(c / 2)
-            s = string.split('/')
-            word = '/'.join(s[0:half])
-            tag = s[half]
-            lemma = '/'.join(s[half+1:])
-        elif string.rpartition('/')[2] == '@card@':
-            s = string[:-7].rpartition('/')
-            word = s[0]
-            tag = s[1]
-            lemma = '@card@'
-        else:            
-            print(string)
-            raise ValueError
-        return word, tag, lemma.lower()
-
 class taggedString(list):
     def __init__(self,ident,l,meta):
         self.id = ident
@@ -125,6 +64,72 @@ class taggedString(list):
         i = 0
         for i in range(len(self)):
             self[i] = self[i]._replace(pos = i)
+
+class taggedStringStore():
+    def __init__(self, dirname):
+        self.dirname = dirname
+#        self.shelvename = os.path.join(self.dirname,'shelve')
+        self.shelvename = self.dirname + '/'+ 'shelve'
+    def reset(self):
+        try:
+            shutil.rmtree(self.dirname)
+        except FileNotFoundError:
+            pass
+        time.sleep(1)
+        os.mkdir(self.dirname)
+    def tssOpen(self):
+        self.shelve = shelve.open(self.shelvename)
+        return self.shelve
+    def tssOpenRead(self):
+        self.sshelve = shelve.open(self.shelvename,flag='r')
+        print(self.shelvename)
+        return self.sshelve
+    def tssAdd(self,ident,ts):
+        self.shelve[ident] = ts
+    def tssClose(self):
+        self.createIndex()
+        self.shelve.close()
+    def createIndex(self):
+        dirname = self.dirname.replace('\\','/')
+        ixname = dirname.rstrip('/').rpartition('/')[2]
+        es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
+        es.indices.delete(index=ixname, ignore=[400, 404])
+        gen = (self.createIndexParms(self.shelve[r], ixname) for r in self.shelve.keys())
+        helpers.bulk(es,gen)
+    def createIndexParms(self,ts,ixname):
+        d = ts.getIndexEntry()
+        d['_type'] = 'response'
+        d['_index'] = ixname
+        d['_id'] = ts.id
+        return d
+
+class taggedStringCreator():
+    def create(self,ident,string,meta):
+        l = []
+        i = 0
+        for ss in string.split():
+            init = self.inittw(ss)
+            l.append(taggedWord(i, init[0],init[1], init[2]))
+            i += 1
+        return taggedString(ident, l, meta)
+    def inittw (self,string):
+        string = string.lower()
+        c = string.count('/')
+        if c % 2 == 0:
+            half = int(c / 2)
+            s = string.split('/')
+            word = '/'.join(s[0:half])
+            tag = s[half]
+            lemma = '/'.join(s[half+1:])
+        elif string.rpartition('/')[2] == '@card@':
+            s = string[:-7].rpartition('/')
+            word = s[0]
+            tag = s[1]
+            lemma = '@card@'
+        else:            
+            print(string)
+            raise ValueError
+        return word, tag, lemma.lower()
 
 class taggedWord(namedtuple('tw', ['pos', 'word','tag','lemma'])):
     __slots__ = ()
