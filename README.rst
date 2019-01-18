@@ -8,12 +8,10 @@ https://www.sketchengine.eu/documentation/corpus-querying/). It consists of thre
 modules: 
 
 - taggedString.py: a store (taggedStringStore), as a Python shelve, of taggedStrings, i.e. 
-tokenized sentences with lemmas and POS-tags 
-
+  tokenized sentences with lemmas and POS-tags 
 - handleQuery.py: translates the CQL queries to queryUnit objects and 
-executes them on a taggedStringStore
-
+  executes them on a taggedStringStore
 - cqlGUI.py: GUI for entering a CQL query, sending it to handleQuery and giving a simple KWIC-like 
-display of the query output
+  display of the query output
 
 
