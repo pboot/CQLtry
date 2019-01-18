@@ -12,7 +12,7 @@ It consists of three modules:
 - cqlGUI.py: GUI for entering a CQL query, sending it to handleQuery and giving a simple KWIC-like 
   display of the query output.
 
-There are other and better implementations of CQL around, but those that I could find where (for me)
+There are other and better implementations of CQL around, but those that I could find were (for me)
 unsuitable, because of platform, complexity, language or otherwise. I also needed an implementation 
 that allowed me to execute CQL queries on my own objects, rather than on a corpus format beyond 
 my control. That's why I decided to write my own small implementation. I use the software to 

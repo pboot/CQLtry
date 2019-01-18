@@ -12,6 +12,10 @@ from random import randint
 #meta = namedtuple('meta', ['collection', 'genre', 'nur', 'rating'])
 
 class taggedString(list):
+    """ taggedStrings are lists of taggedWords (see below). They also have ident and
+        meta properties: ident is an identification, meta is used to carry some metadata
+        (of unspecified content)
+    """
     def __init__(self,ident,l,meta):
         self.id = ident
         self.meta = meta
@@ -23,9 +27,13 @@ class taggedString(list):
 #        for ss in string.split():
 #            init = self.inittw(ss)
 #            self.append(taggedWord(init[0],init[1], init[2], init[3]))
+
     def flatstring(self):
+        """ Returns a string representation of the taggedString """
         return ' '.join(tw.word + '/' + tw.tag + '/' + tw.lemma for tw in self)
-    def getcollocatelemmas(self,termlist,nwords):
+    
+    def unusedgetcollocatelemmas(self,termlist,nwords):
+        """ notused """
         o = []
         gen = (tw for tw in self if tw.word in termlist or tw.lemma in termlist)
         for tw in gen:
@@ -35,41 +43,67 @@ class taggedString(list):
             o.append([tw1.lemma for tw1 in self[max(0,tw.pos - nwords):tw.pos]] +
                 [tw1.lemma for tw1 in self[tw.pos+1:min(len(self),tw.pos + 1 + nwords)]])
         return o
+    
     def getIndexEntry(self):
+        """ Returns dictionary representation of the taggedString, used for the elasticsearch indexing """
         out = self.meta._asdict()
         out['text'] = ' '.join(self.getwordsnopunc())
         out['lemmas'] = ' '.join(self.getlemmasnopunc())
 #        out['tags'] = ' '.join(self.gettags())
         return out
-    def getlemmasfromstring(self,termlist):
+    
+    def unusedgetlemmasfromstring(self,termlist):
+        """ notused """
         if set(self.getlemmas() + self.getwords()) & termlist:
             return [self.getlemmas()]
         else:
             return []
+        
     def getlemmas(self):
+        """ returns a list of the lemmas of the taggedString's taggedWords """
         return [tw.lemma for tw in self]
-    def getlemmasnoverb(self):
+    
+    def unusedgetlemmasnoverb(self):
+        """ returns a list of the lemmas of the taggedString's taggedWords that are not verbs """
         return [tw.lemma for tw in self if tw.tag[0:4] != 'verb']
+    
     def getlemmasnopunc(self):
+        """ returns a list of the lemmas of the taggedString's taggedWords that are not puntuation """
         return [tw.lemma for tw in self if tw.tag[0:4] != 'punc']
+    
     def gettags(self):
+        """ returns a list of the tags of the taggedString's taggedWords"""
         return [tw.tag for tw in self]
+    
     def getwords(self):
+        """ returns a list of the words of the taggedString's taggedWords """
         return [tw.word for tw in self]
-    def getwordsnoverb(self):
+
+    def unusedgetwordsnoverb(self):
+        """ returns a list of the words of the taggedString's taggedWords that are not verbs """
         return [tw.word for tw in self if tw.tag[0:4] != 'verb']
+
     def getwordsnopunc(self):
+        """ returns a list of the words of the taggedString's taggedWords that are not punctuation """
         return [tw.word for tw in self if tw.tag[0:4] != 'punc']
+
     def repos(self):
+        """ resets the pos fields of the taggedString's taggedWords to run from 0 to len(taggedString) """
         i = 0
         for i in range(len(self)):
             self[i] = self[i]._replace(pos = i)
 
 class taggedStringStore():
+    """ A taggedStringStore is a Python shelve that stores taggedStrings. Creating and 
+        filling a taggedStringStore also creates en ElasticSearch index on the 
+        taggedStrings. indexed are the lemmas the words and the metadata.
+    """
+    
     def __init__(self, dirname):
         self.dirname = dirname
 #        self.shelvename = os.path.join(self.dirname,'shelve')
         self.shelvename = self.dirname + '/'+ 'shelve'
+
     def reset(self):
         try:
             shutil.rmtree(self.dirname)
@@ -77,18 +111,23 @@ class taggedStringStore():
             pass
         time.sleep(1)
         os.mkdir(self.dirname)
+
     def tssOpen(self):
         self.shelve = shelve.open(self.shelvename)
         return self.shelve
+
     def tssOpenRead(self):
         self.sshelve = shelve.open(self.shelvename,flag='r')
         print(self.shelvename)
         return self.sshelve
+
     def tssAdd(self,ident,ts):
         self.shelve[ident] = ts
+
     def tssClose(self):
         self.createIndex()
         self.shelve.close()
+
     def createIndex(self):
         dirname = self.dirname.replace('\\','/')
         ixname = dirname.rstrip('/').rpartition('/')[2]
@@ -96,6 +135,7 @@ class taggedStringStore():
         es.indices.delete(index=ixname, ignore=[400, 404])
         gen = (self.createIndexParms(self.shelve[r], ixname) for r in self.shelve.keys())
         helpers.bulk(es,gen)
+
     def createIndexParms(self,ts,ixname):
         d = ts.getIndexEntry()
         d['_type'] = 'response'
@@ -132,6 +172,13 @@ class taggedStringCreator():
         return word, tag, lemma.lower()
 
 class taggedWord(namedtuple('tw', ['pos', 'word','tag','lemma'])):
+    """
+    taggedWords are named tuples. They contain the fields:
+        pos: position in taggedString
+        word: token
+        tag: pos-tag of token
+        lemma: lemma of token
+    """
     __slots__ = ()
 #    def match(self,qterm):
 #        if not isinstance(qterm,qt):
