@@ -25,8 +25,6 @@ class cqlDialog(QWidget):
         self.tsqh = hq.tsQueryHelper('word')
         tss = ts.taggedStringStore(tssstore)
         self.tssShelve = tss.tssOpenRead()
-        print('644528.1' in self.tssShelve)
-        print(self.tssShelve['644528.1'])
         self.elindex = elindex
         self.mrs = {}
 #        for k in self.tssShelve.keys():
