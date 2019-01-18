@@ -19,7 +19,7 @@ my control. That's why I decided to write my own small implementation. I use the
 investigate online book reviews for the aspects of books that are being discussed in the reviews
 (see https://github.com/pboot/bookcrit).
 
-CQLtry assumes a single-level structure (sentences). Functionality that CQL supports:
+CQLtry assumes a single-level structure (sentences). Functionality that CQLtry supports:
 
 - testing on (sequences of) tokens, by word, lemma or tag
 - testing on string value or regular expression
