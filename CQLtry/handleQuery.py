@@ -19,6 +19,7 @@ import math
 from random import randint
 
 def testregex(string):
+    """ sort of tests whether a string is probably a regular expression"""
 #    print(string)
     for c in '.*[]^{}\\|':
         if c in string: return True
@@ -28,7 +29,14 @@ qttemp = namedtuple('qt', ['value','attribute','nopt','oper'])
 qttemp.__new__.__defaults__ = (None,"word",None, '=')
 
 class qt(qttemp):
+    """ A qt is a Query Term, a named tuple, and contains:
+        attribute: the component of the taggedWord that is to be evaluated (word, lemma, tag)
+        value: the string that the the selected component should be compared with
+        nopt: if not None, a positive integer that indicates the term is optional and may be present nopt times
+        oper: either '=' or '!=' """
+        
     def match(self,tw):
+        """ matches an individual taggedWord and  query term and returns True if there is a match """
 #        print(self, tw)
         if self.value is None:
             return True
@@ -54,6 +62,8 @@ class qt(qttemp):
 hitres = namedtuple('hitres', ['hitString','pos'])
 
 class tssQuery():
+    """ A tssQuery (taggedStringStore Query) consists of a reference to a shelve (which should be 
+        taggedStringStore), a query (a queryUnit) and some parameters """
 
     def __init__(self,ashelve,query,elastic=False,elindex=None):
         if not isinstance(ashelve,shelve.DbfilenameShelf):
@@ -66,11 +76,13 @@ class tssQuery():
             self.ixname = elindex
 
     def setQuery(self,query):
+        """ can be used to reuse the tssQuery object with a new query """
         self.checkQuery(query)
         self.query = query
         self.qlen = len(query)
 
     def checkQuery(self,query):
+        """ checks whether the query is a bonafide query  """
         if not isinstance(query,list):
             raise ValueError('Query must be a list but is a ' + str(type(query)))
         for qterm in query:
@@ -80,6 +92,17 @@ class tssQuery():
                 raise ValueError('qterm attribute must be word, lc, lemma or tag but is ' + qterm.attribute)
 
     def execute(self):
+        """ Executes the query against the shelve
+            First, if the elastic index is to be used, it creates a query aginst the elastic index. If there are 
+            more than 200 hits, it asks for 200 hits only. As the elastic search can usually only return candidate hits, 
+            a furter step of testing against the actual contents of the taggedStrings is necessary. 
+            Then either the entire shelve (if no elastic search) or the selected keys are read and the taggedStrings 
+            are compared with the query. The comparison is done in the tsqueryexec function of a queryHelper object. 
+            The execute function returns a tuple consisting of 
+            - a list of hitres objects, in turn a tuple of a taggedString that matches the query and a position
+              of that taggedString in the taggedString that it was taken from
+            - the number of hits, as computed (if less than 200) or as predicted (if more than 200)
+            """
         if len(self.query) == 0:
             raise ValueError('Query is empty')
         res = []
@@ -141,14 +164,20 @@ class tssQuery():
         return(res, len(res) if factor <= 1 else math.floor(len(res) * factor))
 
 class queryUnit(list):
-    """ """
+    """ a queryUnit is a list of query terms (qt). 
+        A queryUnit can be anchored to the start of the test string. """
+        
     def __init__(self,l=[],anchored=None):
         self.checkQUnit(l,anchored)
         self.setAnchor(anchored)
         self += l
+        
     def setAnchor(self,anchored):
         self.anchored = anchored
+        
     def checkQUnit(self,l ,anchored):
+        """ Does some elementary checking to ensure that what is presented as a queryUnit fulfills 
+            the necessary properties """
         if anchored is not None and anchored not in ['start']:
             raise ValueError("anchored must be None or 'start' but is " + anchored)
         if not isinstance(l,list):
@@ -165,8 +194,8 @@ class tsQueryHelper():
         
     def tsqueryexec(self, query, sent):
         """ Matches taggedString and querypattern. Returns a list of one tuple per hit. 
-            The tuple consists of first the position, of the hit, than a list of the matching words in 
-            the taggedString """
+            The tuple consists of first the position of the hit, than a list of the matching words in 
+            the taggedString. Removes overlapping (actually nested) results by calling removeoverlap """
         sentres = []
         minlength = sum(1 for qtm in query if qtm.nopt is None)
         if minlength > 0:
@@ -194,8 +223,8 @@ class tsQueryHelper():
         print(sent[0])
         return []
 
-        
     def removeoverlap(self,results):
+        """ Because of optional terms in the query, hits may nest. This function removes the nested results """
 #        print()
 #        for r in results:
 #            print(r)
@@ -225,8 +254,8 @@ class tsQueryHelper():
         return len(result[1])
     
     def matchtw(self,querypart,sentpart):
-        """ Recursive function ('match taggend word'): matches one term from sentence and querypattern; 
-        if there is a match, calls itself with as arguments the e=rest of the sentence and the rest 
+        """ Recursive function ('match tagged word'): matches one term from sentence and querypattern; 
+        if there is a match, calls itself with as arguments the rest of the sentence and the rest 
         of the pattern. Returns a list containing the matching tokens in the sentence pattern"""
 #        print('qt',querypart)
 #        print('sp',sentpart)
@@ -257,7 +286,7 @@ class tsQueryHelper():
                             return None
             else:
                 return None
-        else:
+        else: # term is optional
             if qtm.match(sentpart[0]):
 #                print('f')
                 if len(querypart) == 1:
@@ -276,7 +305,7 @@ class tsQueryHelper():
                         out = self.matchtw([newqt] + querypart[1:],sentpart[1:])
                         if out:
                             return [sentpart[0]] + out
-#       All remaining cases have nopt but the optionam term didnt work out 
+#       All remaining cases have nopt but the optional term didnt work out 
 #        print('e')
         if len(querypart) == 1:
             return None
@@ -288,6 +317,8 @@ class tsQueryHelper():
                 return None
             
     def translate(self,string):
+        """ Translates a string containing a CQL query as entered by the user and returns a queryUnit.
+            Also checks whether the presented query is syntactically valid. """
         string = ''.join(string.split())
         print(string)
         top = queryUnit()

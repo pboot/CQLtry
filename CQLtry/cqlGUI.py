@@ -19,6 +19,8 @@ import re
 
 
 class cqlDialog(QWidget):
+    """ Displays a dialog where the user can enter a CQL query, which is executed against a 
+        taggedStringStore. The results are displayed in a KWIC-like layout"""
     
     def __init__(self,tssstore, elindex):
         super().__init__()
@@ -91,13 +93,6 @@ class cqlDialog(QWidget):
         self.resTable.itemDoubleClicked.connect(self.moreInfo)
         browservBox.addWidget(self.resTable)
 
-        codeLbl = QLabel('Code', self)
-        self.codeEdit = QLineEdit("")
-        
-        codevBox = QVBoxLayout()
-        codevBox.addWidget(codeLbl)
-        codevBox.addWidget(self.codeEdit)
-
 #        saveButton = QPushButton("&Save CQL command and code")
 #        saveButton.clicked.connect(self.saveExec)            
         
@@ -115,7 +110,6 @@ class cqlDialog(QWidget):
         vbox.addLayout(self.cqlhBox)
         vbox.addLayout(buttonhBox)
         vbox.addLayout(browservBox)
-        vbox.addLayout(codevBox)
         vbox.addLayout(sbuttonhBox)
         
         self.setLayout(vbox)

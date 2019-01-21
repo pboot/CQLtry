@@ -95,16 +95,18 @@ class taggedString(list):
 
 class taggedStringStore():
     """ A taggedStringStore is a Python shelve that stores taggedStrings. Creating and 
-        filling a taggedStringStore also creates en ElasticSearch index on the 
-        taggedStrings. indexed are the lemmas the words and the metadata.
+        filling a taggedStringStore also creates an ElasticSearch index on the 
+        taggedStrings. indexed are the lemmas, the words and the metadata.
     """
     
     def __init__(self, dirname):
+        """ Create the taggedStringStore by giving the directory where the shelve will be placed. """
         self.dirname = dirname
 #        self.shelvename = os.path.join(self.dirname,'shelve')
         self.shelvename = self.dirname + '/'+ 'shelve'
 
     def reset(self):
+        """ remove the entire directory and recreate it """
         try:
             shutil.rmtree(self.dirname)
         except FileNotFoundError:
@@ -113,22 +115,28 @@ class taggedStringStore():
         os.mkdir(self.dirname)
 
     def tssOpen(self):
+        """ Open the shelve and return the opened shelve"""
         self.shelve = shelve.open(self.shelvename)
         return self.shelve
 
     def tssOpenRead(self):
+        """ Open the shelve for reading only and return the opened shelve"""
         self.sshelve = shelve.open(self.shelvename,flag='r')
         print(self.shelvename)
         return self.sshelve
 
     def tssAdd(self,ident,ts):
+        """ add a taggedString to the store """
         self.shelve[ident] = ts
 
     def tssClose(self):
+        """ Closes the shelve and creates the elasticSearch index """
         self.createIndex()
         self.shelve.close()
 
     def createIndex(self):
+        """ Creates an elastic search index on the store, deletes an existing index first. 
+            The name of the index is the last part (part after last slash) of the directory name """
         dirname = self.dirname.replace('\\','/')
         ixname = dirname.rstrip('/').rpartition('/')[2]
         es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
@@ -137,6 +145,7 @@ class taggedStringStore():
         helpers.bulk(es,gen)
 
     def createIndexParms(self,ts,ixname):
+        """ creates the data to be indexed for an individual taggedString in the store """
         d = ts.getIndexEntry()
         d['_type'] = 'response'
         d['_index'] = ixname
@@ -144,6 +153,8 @@ class taggedStringStore():
         return d
 
 class taggedStringCreator():
+    """ utility object, helps create taggedString out of id, string and metadata
+        string will consist of space-separated groups of word/pos-tag/lemma."""
     def create(self,ident,string,meta):
         l = []
         i = 0
@@ -152,7 +163,9 @@ class taggedStringCreator():
             l.append(taggedWord(i, init[0],init[1], init[2]))
             i += 1
         return taggedString(ident, l, meta)
+    
     def inittw (self,string):
+        """ creates taggedWord out of word/pos-tag/lemma group """
         string = string.lower()
         c = string.count('/')
         if c % 2 == 0:

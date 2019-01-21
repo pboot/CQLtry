@@ -29,7 +29,7 @@ CQLtry assumes a single-level structure (sentences). Functionality that CQLtry s
 - repetitions (+ or {})
 - anchoring query to beginning of sentence
 
-So many of the interesting aspects of CQL are missing. I may add a feature or two in the future, 
+This means many of the interesting aspects of CQL are missing. I may add a feature or two in the future, 
 but don't expect any large improvements in CQL coverage. 
 
 
